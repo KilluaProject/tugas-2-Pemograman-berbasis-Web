@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stok Bahan Ajar - SITTA UT</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.7.14/dist/vue.js"></script>
+    <script>
+        // cek login valid atau tidak
+        if (!localStorage.getItem('sitta_user')) {
+            window.location.href = 'login.html';
+        }
+    </script>
+</head>
+
+<body>
+    <header class="navbar">
+        <div class="nav-container">
+            <a href="index.html" class="brand">
+                <img src="assets/logo_ut.png" alt="Logo UT" class="brand-logo">
+                <div class="brand-text">
+                    <span class="brand-title">SITTA UT</span>
+                    <span class="brand-subtitle">Sistem Tiras & Transaksi Bahan Ajar</span>
+                </div>
+            </a>
+            <nav class="nav-links">
+                <a href="index.html" class="nav-link">Beranda</a>
+                <a href="stok.html" class="nav-link active">Stok Bahan Ajar</a>
+                <a href="tracking.html" class="nav-link">Tracking DO</a>
+                <div class="nav-user">
+                    <span class="user-badge" id="user-display">Admin UT</span>
+                    <button type="button" class="btn-logout" onclick="logout()">Keluar</button>
+                </div>
+            </nav>
+        </div>
+    </header>
+
+    <div id="app" class="container">
+        <!-- Notifikasi dari Watcher -->
+        <div v-show="logPesan" class="alert-info">
+            <strong>Info Sistem:</strong> <span v-text="logPesan"></span>
+        </div>
+
+        <!-- fitur untuk sortir -->
+        <div class="card">
+            <h3>Filter &amp; Urutkan Data Stok</h3>
+            <div class="grid-filter">
+                <!-- Filter UT-Daerah -->
+                <div class="form-group">
+                    <label>Filter UT-Daerah (UPBJJ):</label>
+                    <select v-model="selectedUpbjj">
+                        <option value="">-- Semua UT-Daerah --</option>
+                        <option v-for="upbjj in upbjjList" :key="upbjj" :value="upbjj">{{ upbjj }}</option>
+                    </select>
+                </div>
+
+                <!-- ini akan muncul kalo user udah milih UT-Daerah yaaakkkk -->
+                <div class="form-group" v-if="selectedUpbjj !== ''">
+                    <label>Filter Kategori Mata Kuliah:</label>
+                    <select v-model="selectedKategori">
+                        <option value="">-- Semua Kategori di {{ selectedUpbjj }} --</option>
+                        <option v-for="kat in availableKategori" :key="kat" :value="kat">{{ kat }}</option>
+                    </select>
+                </div>
+
+                <!-- Sort By -->
+                <div class="form-group">
+                    <label>Urutkan Berdasarkan (Sort):</label>
+                    <select v-model="sortBy">
+                        <option value="">-- Urutan Default --</option>
+                        <option value="judul-asc">Judul (A - Z)</option>
+                        <option value="judul-desc">Judul (Z - A)</option>
+                        <option value="qty-asc">Jumlah Stok (Terkecil - Terbesar)</option>
+                        <option value="qty-desc">Jumlah Stok (Terbesar - Terkecil)</option>
+                        <option value="harga-asc">Harga (Termurah - Termahal)</option>
+                        <option value="harga-desc">Harga (Termahal - Termurah)</option>
+                    </select>
+                </div>
+
+                <!-- checkbox untuk re-order-->
+                <div class="form-group" style="justify-content: center;">
+                    <label style="cursor: pointer;">
+                        <input type="checkbox" v-model="filterReorder">
+                        Tampilkan hanya yang perlu Reorder (Stok &lt; Safety atau Stok = 0)
+                    </label>
+                </div>
+            </div>
+
+            <button class="btn-secondary" @click="resetFilter">Reset Filter</button>
+        </div>
+
+        <!-- Tabel hasil render data -->
+        <div class="card">
+            <h3>Daftar Stok Bahan Ajar ({{ filteredAndSortedStok.length }} item)</h3>
+            <div style="overflow-x: auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Kode / Nama Mata Kuliah</th>
+                            <th>Kategori</th>
+                            <th>UT-Daerah</th>
+                            <th>Lokasi Rak</th>
+                            <th>Harga</th>
+                            <th>Stok (Qty)</th>
+                            <th>Safety Stock</th>
+                            <th>Status</th>
+                            <th>Catatan</th>
+                            <th>Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-if="filteredAndSortedStok.length === 0">
+                            <td colspan="10" style="text-align: center;">Tidak ada data bahan ajar yang sesuai dengan
+                                filter.</td>
+                        </tr>
+                        <tr v-for="item in filteredAndSortedStok" :key="item.kode">
+                            <td>
+                                <strong>{{ item.kode }}</strong><br>
+                                <span v-text="item.judul"></span>
+                            </td>
+                            <td>{{ item.kategori }}</td>
+                            <td>{{ item.upbjj }}</td>
+                            <td>{{ item.lokasiRak }}</td>
+                            <td>Rp {{ item.harga.toLocaleString('id-ID') }}</td>
+                            <td><strong>{{ item.qty }}</strong></td>
+                            <td>{{ item.safety }}</td>
+                            <!-- logic untuk nampilin statusnya -->
+                            <td>
+                                <span v-if="item.qty === 0" class="status-kosong">Kosong</span>
+                                <span v-else-if="item.qty < item.safety" class="status-menipis">Menipis</span>
+                                <span v-else class="status-aman">Aman</span>
+                            </td>
+                            <!-- untuk ngerendier catatan HTMLnya -->
+                            <td>
+                                <div v-html="item.catatanHTML"></div>
+                            </td>
+                            <td>
+                                <button class="btn-warning" @click="mulaiEdit(item)">Edit</button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Pop up untuk tombol edit -->
+        <div v-if="editingKode" class="modal-overlay" @click.self="batalEdit">
+            <div class="modal-card">
+                <div class="modal-header">
+                    <h3>Edit Data Stok Bahan Ajar</h3>
+                    <button type="button" class="btn-close" @click="batalEdit" title="Tutup">&times;</button>
+                </div>
+
+                <form @submit.prevent="simpanEdit">
+                    <div class="modal-body">
+                        <!-- Detail mata kuliah -->
+                        <div class="modal-info-box">
+                            <div><strong>Kode:</strong> {{ editForm.kode }}</div>
+                            <div><strong>Mata Kuliah:</strong> {{ editForm.judul }}</div>
+                            <div><strong>UT-Daerah:</strong> {{ editForm.upbjj }} ({{ editForm.kategori }})</div>
+                        </div>
+
+                        <div class="grid-form" style="margin-top: 15px;">
+                            <div class="form-group">
+                                <label>Lokasi Rak *</label>
+                                <input type="text" v-model.trim="editForm.lokasiRak" placeholder="Contoh: R1-B2"
+                                    required>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Harga (Rp) *</label>
+                                <input type="number" v-model.number="editForm.harga" min="1" placeholder="Contoh: 65000"
+                                    required>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Jumlah Stok (Qty) *</label>
+                                <input type="number" v-model.number="editForm.qty" min="0" placeholder="0" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Safety Stock *</label>
+                                <input type="number" v-model.number="editForm.safety" min="0" placeholder="10" required>
+                            </div>
+                        </div>
+
+                        <div class="form-group" style="margin-top: 10px; margin-bottom: 0;">
+                            <label>Catatan (Mendukung HTML) *</label>
+                            <input type="text" v-model.trim="editForm.catatanHTML"
+                                placeholder="Contoh: <em>Edisi terbaru</em>" required>
+                            <small style="color: #64748b; margin-top: 4px;">Contoh tag: &lt;em&gt;miring&lt;/em&gt;,
+                                &lt;strong&gt;tebal&lt;/strong&gt;, &lt;u&gt;garis bawah&lt;/u&gt;</small>
+                        </div>
+                    </div>
+
+                    <div class="modal-footer">
+                        <button type="button" class="btn-secondary" @click="batalEdit">Batal</button>
+                        <button type="submit" class="btn-primary">Simpan Perubahan</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Form untuk nambah data baru -->
+        <div class="card">
+            <h3>Tambah Bahan Ajar Baru</h3>
+            <form @submit.prevent="tambahBahanAjar">
+                <div class="grid-form">
+                    <div class="form-group">
+                        <label>Kode Mata Kuliah *</label>
+                        <input type="text" v-model.trim="newItem.kode" placeholder="Contoh: MSIM4309">
+                        <span class="error-msg" v-if="errors.kode">{{ errors.kode }}</span>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Nama / Judul Mata Kuliah *</label>
+                        <input type="text" v-model.trim="newItem.judul" placeholder="Contoh: Pemrograman Web">
+                        <span class="error-msg" v-if="errors.judul">{{ errors.judul }}</span>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Kategori Mata Kuliah *</label>
+                        <select v-model="newItem.kategori">
+                            <option value="">-- Pilih Kategori --</option>
+                            <option v-for="kat in kategoriList" :key="kat" :value="kat">{{ kat }}</option>
+                        </select>
+                        <span class="error-msg" v-if="errors.kategori">{{ errors.kategori }}</span>
+                    </div>
+
+                    <div class="form-group">
+                        <label>UT-Daerah (UPBJJ) *</label>
+                        <select v-model="newItem.upbjj">
+                            <option value="">-- Pilih UPBJJ --</option>
+                            <option v-for="upbjj in upbjjList" :key="upbjj" :value="upbjj">{{ upbjj }}</option>
+                        </select>
+                        <span class="error-msg" v-if="errors.upbjj">{{ errors.upbjj }}</span>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Lokasi Rak *</label>
+                        <input type="text" v-model.trim="newItem.lokasiRak" placeholder="Contoh: R1-B2">
+                        <span class="error-msg" v-if="errors.lokasiRak">{{ errors.lokasiRak }}</span>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Harga (Rp) *</label>
+                        <input type="number" v-model.number="newItem.harga" min="1" placeholder="Contoh: 75000">
+                        <span class="error-msg" v-if="errors.harga">{{ errors.harga }}</span>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Jumlah Stok (Qty) *</label>
+                        <input type="number" v-model.number="newItem.qty" min="0" placeholder="0">
+                        <span class="error-msg" v-if="errors.qty">{{ errors.qty }}</span>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Safety Stock *</label>
+                        <input type="number" v-model.number="newItem.safety" min="1" placeholder="10">
+                        <span class="error-msg" v-if="errors.safety">{{ errors.safety }}</span>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Catatan (Mendukung HTML) *</label>
+                        <input type="text" v-model.trim="newItem.catatanHTML"
+                            placeholder="Contoh: <em>Edisi terbaru</em>">
+                        <span class="error-msg" v-if="errors.catatanHTML">{{ errors.catatanHTML }}</span>
+                    </div>
+                </div>
+                <button type="submit" class="btn-primary">Simpan Bahan Ajar</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="js/stok-app.js"></script>
+    <script>
+        try {
+            var user = JSON.parse(localStorage.getItem('sitta_user'));
+            if (user && user.email) {
+                document.getElementById('user-display').textContent = user.email;
+            }
+        } catch (e) { }
+
+        function logout() {
+            if (confirm('Apakah Anda yakin ingin keluar dari sistem SITTA?')) {
+                localStorage.removeItem('sitta_user');
+                window.location.href = 'login.html';
+            }
+        }
+    </script>
+</body>
+
+</html>

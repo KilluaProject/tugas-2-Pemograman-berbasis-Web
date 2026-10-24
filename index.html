@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SITTA UT - Beranda</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.7.14/dist/vue.js"></script>
+    <script>
+        if (!localStorage.getItem('sitta_user')) {
+            window.location.href = 'login.html';
+        }
+    </script>
+</head>
+
+<body>
+    <div id="app">
+        <header class="navbar">
+            <div class="nav-container">
+                <a href="index.html" class="brand">
+                    <img src="assets/logo_ut.png" alt="Logo UT" class="brand-logo">
+                    <div class="brand-text">
+                        <span class="brand-title">SITTA UT</span>
+                        <span class="brand-subtitle">Sistem Tiras &amp; Transaksi Bahan Ajar</span>
+                    </div>
+                </a>
+                <nav class="nav-links">
+                    <a href="index.html" class="nav-link active">Beranda</a>
+                    <a href="stok.html" class="nav-link">Stok Bahan Ajar</a>
+                    <a href="tracking.html" class="nav-link">Tracking DO</a>
+                    <div class="nav-user">
+                        <span class="user-badge">{{ currentUser.email }}</span>
+                        <button type="button" class="btn-logout" @click="logout">Keluar</button>
+                    </div>
+                </nav>
+            </div>
+        </header>
+
+        <div class="container">
+            <div class="card" style="text-align: center;">
+                <h2>Selamat Datang di SITTA UT, {{ currentUser.nama }} 👋</h2>
+                <p style="color: #64748b; margin-top: 5px;">{{ tanggalHariIni }}</p>
+                <p style="margin-top: 10px;">
+                    Silakan pilih menu di bawah ini untuk mengelola stok bahan ajar atau melacak status pengiriman
+                    Delivery Order (DO).
+                </p>
+            </div>
+
+            <div class="menu-cards">
+                <a v-for="menu in menus" :key="menu.judul" :href="menu.url" class="menu-card">
+                    <h3>{{ menu.judul }}</h3>
+                    <p>{{ menu.deskripsi }}</p>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/index-app.js"></script>
+</body>
+
+</html>

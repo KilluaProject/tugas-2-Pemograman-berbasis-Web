@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - SITTA UT</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.7.14/dist/vue.js"></script>
+    <script>
+        if (localStorage.getItem('sitta_user')) {
+            window.location.href = 'index.html';
+        }
+    </script>
+</head>
+
+<body class="login-page">
+    <div id="login-app" class="login-container">
+        <div class="login-box">
+            <div class="login-header">
+                <img src="assets/logo_ut.png" alt="Logo UT" class="login-logo">
+                <h2>SITTA UT</h2>
+                <p>Sistem Informasi Tiras &amp; Transaksi Bahan Ajar</p>
+            </div>
+
+            <div v-if="errorMessage" class="alert-error">
+                {{ errorMessage }}
+            </div>
+
+            <div v-if="successMessage" class="alert-success">
+                {{ successMessage }}
+            </div>
+
+            <form @submit.prevent="handleLogin" class="login-form">
+                <div class="form-group">
+                    <label for="email">Email</label>
+                    <input id="email" type="email" v-model.trim="email" placeholder="Masukan email anda" required
+                        autocomplete="username">
+                </div>
+
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <div class="password-field">
+                        <input id="password" :type="showPassword ? 'text' : 'password'" v-model="password"
+                            placeholder="Masukkan password" required autocomplete="current-password">
+                        <button type="button" class="btn-eye" @click="showPassword = !showPassword"
+                            :title="showPassword ? 'Sembunyikan password' : 'Lihat password'" tabindex="-1">
+                            <svg v-if="!showPassword" width="18" height="18" fill="none" stroke="currentColor"
+                                stroke-width="2" viewBox="0 0 24 24">
+                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                                <circle cx="12" cy="12" r="3" />
+                            </svg>
+                            <svg v-else width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"
+                                viewBox="0 0 24 24">
+                                <path
+                                    d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24M1 1l22 22" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn-primary btn-block" :disabled="isLoading">
+                    {{ isLoading ? 'Memproses...' : 'Masuk' }}
+                </button>
+            </form>
+
+            <div class="login-footer">
+                <p>&copy; Universitas Terbuka</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/login-app.js"></script>
+</body>
+
+</html>
